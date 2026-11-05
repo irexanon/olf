@@ -1,38 +1,81 @@
 # Launcher Position Fixer
 
-Standalone pure-Java LSPosed module for the Oplus Launcher package `com.android.launcher`.
+Standalone pure-Java LSPosed module for **Oplus Launcher** (`com.android.launcher`) on OxygenOS 15 / OnePlus.
+
+## Problem
+
+Ice Box (root mode) freezes apps with:
+
+```text
+IPackageManager.setApplicationEnabledSetting(pkg, 3 /* DISABLED_USER */, ...)
+```
+
+and unfreezes with:
+
+```text
+IPackageManager.setApplicationEnabledSetting(pkg, 1 /* ENABLED */, ...)
+```
+
+After unfreeze the launcher icon may disappear or move. This module restores the exact previous position.
 
 ## What it does
 
-- Hooks only the launcher process.
-- Saves home-screen/folder favorite rows before Ice Box root mode reports packages unavailable.
-- Restores `container`, `screen`, `cellX`, `cellY`, `spanX`, `spanY`, `rank`, and profile metadata after the package becomes available.
-- Avoids clearing launcher data, deleting the launcher database, or force-stopping the launcher.
-- Does not change Ice Box's real package state. Ice Box still uses `DISABLED_USER` during freeze.
+- Hooks **only** the launcher process (`com.android.launcher`).
+- On `onPackagesUnavailable` → snapshots matching favorites rows (package + component + profileId).
+- On `onPackagesAvailable` / `onPackageChanged` / `onPackageAdded` → restores position (or recreates the item if it was removed).
+- Saves snapshots in the **module’s own SharedPreferences** (never touches launcher private storage).
+- Updates only the changed package’s rows.
+- Never clears launcher data, never deletes databases, never force-stops the launcher.
+- Does not modify Ice Box behaviour and does not re-enable packages itself.
+
+## Scope (important)
+
+In LSPosed Manager enable the module and scope it **only** to:
+
+```text
+com.android.launcher
+```
+
+Do **not** scope system_server, SystemUI, Ice Box, or any other app.
 
 ## Build
 
-This is an Android Gradle project. The Xposed API is compile-only at `app/libs/xposed-api-82.jar`.
-
 ```sh
+# Requires Android SDK + JDK 17
 gradle :app:assembleRelease
 ```
 
-The generated APK is under `app/build/outputs/apk/release/`.
+APK location:
 
-## Install and scope
+```text
+app/build/outputs/apk/release/app-release.apk
+```
 
-1. Install the APK normally.
-2. Enable it in LSPosed.
-3. Scope it only to `com.android.launcher`.
-4. Reboot or restart the launcher process.
-5. Test with one non-critical application.
+The release build is signed with the debug keystore so it installs without a custom keystore.
+
+## Install
+
+1. Install the APK.
+2. Open LSPosed → Modules → enable **Launcher Position Fixer**.
+3. Scope → check only `com.android.launcher`.
+4. Reboot (or force-stop the launcher once).
 
 ## Test
 
-1. Put a test app on a known home-screen slot.
-2. Freeze it with Ice Box in root mode.
+1. Place a test app on a known home-screen cell (or inside a folder).
+2. Freeze it with Ice Box (root mode).
 3. Unfreeze it.
-4. Check that the icon returns to the same page and cell.
+4. The icon must return to the exact same page / folder / cell.
 
-The module logs under `LauncherPositionFixer`. If the Oplus build uses a changed provider schema, disable the module and collect the log before changing the provider URI or columns.
+Logs are tagged `LauncherPositionFixer`.
+
+## Safety
+
+- Fail-closed: if the favorites provider URI or schema is unknown, the module does nothing.
+- All heavy work runs on a background executor.
+- Debounced restores to avoid racing rapid package callbacks.
+- Never rewrites the whole favorites table.
+
+## Version
+
+0.2.0 – rewritten for Oplus Launcher 15.8.x / OxygenOS 15.

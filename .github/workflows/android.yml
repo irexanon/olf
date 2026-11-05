@@ -24,14 +24,13 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Build with Gradle
-        run: |
-          gradle :app:assembleRelease --no-daemon --stacktrace
+      - name: Build release APK
+        run: gradle :app:assembleRelease --no-daemon --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: app-release
+          name: LauncherPositionFixer-release
           path: app/build/outputs/apk/release/*.apk
-          if-no-files-found: ignore
+          if-no-files-found: warn
