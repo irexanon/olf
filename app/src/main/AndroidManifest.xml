@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:label="Launcher Position Fixer" android:allowBackup="false">
+        <meta-data android:name="xposedmodule" android:value="true" />
+        <meta-data android:name="xposeddescription" android:value="Preserve Oplus Launcher home-screen positions across root freezer disable/enable cycles" />
+        <meta-data android:name="xposedminversion" android:value="93" />
+    </application>
+</manifest>
